@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowUpDown, Plus, Download, Eye, Pencil, Trash2, LogOut, Settings } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
+import API_BASE_URL from "../config/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function Dashboard() {
 
 const fetchData = async () => {
   try {
-    const res = await axios.get("http://localhost:5000/api/vendors", {
+    const res = await axios.get(`${API_BASE_URL}/vendors`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
       },
@@ -103,7 +104,7 @@ const handleDelete = useCallback(async (id: string) => {
   if (!window.confirm("Are you sure you want to delete this entry?")) return;
 
   try {
-    await axios.delete(`http://localhost:5000/api/vendors/${id}`, {
+    await axios.delete(`${API_BASE_URL}/vendors/${id}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
       },
