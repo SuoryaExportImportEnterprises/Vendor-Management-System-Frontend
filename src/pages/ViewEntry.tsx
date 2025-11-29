@@ -192,13 +192,6 @@
 //   const [loading, setLoading] = useState(true);
 
 
-//   const fetchEntry = useCallback(async () => {
-//   try {
-//     const res = await axios.get(`http://localhost:5000/api/vendors/${id}`, {
-//       headers: {
-//         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-//       },
-//     });
 
 //     setEntry(res.data);
 //     setLoading(false);
