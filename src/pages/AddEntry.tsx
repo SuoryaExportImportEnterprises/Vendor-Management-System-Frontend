@@ -54,6 +54,8 @@ export default function AddEntry() {
   // --------------------------
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
@@ -412,20 +414,41 @@ useEffect(() => {
               <div className="space-y-2">
                 <Label>Visiting Card Image *</Label>
                 <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setVisitingCardFile(e.target.files?.[0] || null)}
-                />
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File too large! Max allowed is 25MB");
+        return;
+      }
+      setVisitingCardFile(file);
+    }
+  }}
+/>
+
               </div>
 
               {/* Product Image */}
               <div className="space-y-2">
                 <Label>Product Image *</Label>
                 <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setProductImageFile(e.target.files?.[0] || null)}
-                />
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File too large! Max allowed is 25MB");
+        return;
+      }
+      setProductImageFile(file);
+    }
+  }}
+/>
+
+
               </div>
 
               {/* Buttons */}
