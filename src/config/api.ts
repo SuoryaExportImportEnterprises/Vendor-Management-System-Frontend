@@ -1,3 +1,3 @@
-const API_BASE_URL = "http://13.233.194.64/api";
+const API_BASE_URL = "https://vendor.suorya.com/api";
 
 export default API_BASE_URL;
