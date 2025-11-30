@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-toastify";
-// import { states, citiesByState } from "@/data/mockData";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 import { getFormFieldOptions } from "@/services/formFieldOptionsService";
@@ -48,10 +47,6 @@ export default function AddEntry() {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<AddEntryForm>();
-
-  // --------------------------
-  // IMAGE STATES (Option B)
-  // --------------------------
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
@@ -66,10 +61,11 @@ export default function AddEntry() {
   const [stateList, setStateList] = useState([]);
 const [cityList, setCityList] = useState([]);
 
+const [selectedStateValue, setSelectedStateValue] = useState("");
+const [selectedStateCode, setSelectedStateCode] = useState("");
+const [selectedCityValue, setSelectedCityValue] = useState("");
 
-  // --------------------------
-  // FETCH DYNAMIC CATEGORY OPTIONS
-  // --------------------------
+
   useEffect(() => {
   async function load() {
     const options = await fetchCategories();
@@ -118,10 +114,6 @@ useEffect(() => {
   }
 };
 
-
-  // --------------------------
-  // SUBMIT FORM
-  // --------------------------
   const onSubmit = async (data: AddEntryForm) => {
     if (!visitingCardFile) {
       toast.error("Visiting card image is required");
@@ -135,7 +127,7 @@ useEffect(() => {
     setIsLoading(true);
 
     try {
-      // Upload images first
+      
       const visitingCardUrl = await uploadImage(visitingCardFile);
       const productImageUrl = await uploadImage(productImageFile);
 
@@ -145,7 +137,6 @@ useEffect(() => {
         return;
       }
 
-      // Prepare full form payload
       const payload = {
         ...data,
         visitingCardImageUrl: visitingCardUrl,
@@ -173,10 +164,6 @@ useEffect(() => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* Back Button
-        <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-        </Button> */}
 
         <Card>
           <CardHeader>
@@ -197,7 +184,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Company Name */}
               <div className="space-y-2">
                 <Label>Company Name *</Label>
                 <Input
@@ -206,38 +192,60 @@ useEffect(() => {
                 />
               </div>
 
+
+
               {/* Vendor State */}
-              <div className="space-y-2">
-                <Label>Vendor State *</Label>
-                <Select
-  onValueChange={(stateCode) => {
-    setValue("vendorState", stateCode);
-    setValue("vendorCity", ""); // reset city
+<div className="space-y-2">
+  <Label>Vendor State *</Label>
 
-    axios.get(`${API_BASE_URL}/location/cities/${stateCode}`)
-      .then(res => setCityList(res.data))
-      .catch(err => console.error("City fetch error", err));
-  }}
->
-  <SelectTrigger className={errors.vendorState ? "border-destructive" : ""}>
-    <SelectValue placeholder="Select state" />
-  </SelectTrigger>
+  <Select
+    value={selectedStateValue}
+    onValueChange={(value) => {
+      const [stateName, stateCode] = value.split("||");
 
-  <SelectContent>
-    {stateList.map((s) => (
-      <SelectItem key={s.isoCode} value={s.isoCode}>
-        {s.name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+      // store full state name in form
+      setValue("vendorState", stateName);
 
-<input type="hidden" {...register("vendorState", { required: "Required" })} />
-              </div>
+      // store combined value for dropdown
+      setSelectedStateValue(value);
 
+      // store isoCode separately (for cities)
+      setSelectedStateCode(stateCode);
 
+      // reset city
+      setValue("vendorCity", "");
+      setCityList([]);
 
+      axios
+        .get(`${API_BASE_URL}/location/cities/${stateCode}`)
+        .then((res) => setCityList(res.data))
+        .catch((err) => console.error("City fetch error", err));
+    }}
+  >
+    <SelectTrigger className={errors.vendorState ? "border-destructive" : ""}>
+      <SelectValue placeholder="Select state" />
+    </SelectTrigger>
 
+    <SelectContent>
+      {stateList.map((s) => (
+        <SelectItem key={s.isoCode} value={`${s.name}||${s.isoCode}`}>
+          {s.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+
+  <input type="hidden" {...register("vendorState", { required: true })} />
+</div>
+
+{selectedCity === "Others" && (
+                <div className="space-y-2">
+                  <Label>Other Area Name *</Label>
+                  <Input
+                    {...register("otherAreaName", { required: "Required" })}
+                  />
+                </div>
+              )}
 
 
 {/* Vendor City */}
@@ -245,6 +253,7 @@ useEffect(() => {
   <Label>Vendor City *</Label>
 
   <Select
+    value={selectedCity || ""}
     disabled={cityList.length === 0}
     onValueChange={(cityName) => {
       setValue("vendorCity", cityName);
@@ -255,31 +264,17 @@ useEffect(() => {
     </SelectTrigger>
 
     <SelectContent>
-      {/* List all API cities */}
       {cityList.map((c) => (
         <SelectItem key={c.name} value={c.name}>
           {c.name}
         </SelectItem>
       ))}
-
-      {/* Always show "Others" at bottom */}
       <SelectItem value="Others">Others</SelectItem>
     </SelectContent>
   </Select>
 
-  <input type="hidden" {...register("vendorCity", { required: "Required" })} />
+  <input type="hidden" {...register("vendorCity", { required: true })} />
 </div>
-
-
-              {/* Other Area */}
-              {selectedCity === "Others" && (
-                <div className="space-y-2">
-                  <Label>Other Area Name *</Label>
-                  <Input
-                    {...register("otherAreaName", { required: "Required" })}
-                  />
-                </div>
-              )}
 
               {/* Vendor Address */}
               <div className="space-y-2">
@@ -301,23 +296,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Product Category */}
-              {/* <div className="space-y-2">
-                <Label>Product Category *</Label>
-                <Select onValueChange={(v) => setValue("productCategory", v)}>
-                  <SelectTrigger className={errors.productCategory ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    {productCategories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <input type="hidden" {...register("productCategory", { required: "Required" })} />
-              </div> */}
 
               <div className="space-y-2">
   <Label>Product Category *</Label>
@@ -370,8 +348,6 @@ useEffect(() => {
 </Popover>
 
 </div>
-
-
               {/* Product Description */}
               <div className="space-y-2">
                 <Label>Product Description *</Label>
@@ -427,7 +403,6 @@ useEffect(() => {
     }
   }}
 />
-
               </div>
 
               {/* Product Image */}
@@ -447,8 +422,6 @@ useEffect(() => {
     }
   }}
 />
-
-
               </div>
 
               {/* Buttons */}
