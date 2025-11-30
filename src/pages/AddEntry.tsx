@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-toastify";
-import { states, citiesByState } from "@/data/mockData";
+// import { states, citiesByState } from "@/data/mockData";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 import { getFormFieldOptions } from "@/services/formFieldOptionsService";
@@ -60,7 +60,10 @@ export default function AddEntry() {
 
   const selectedState = watch("vendorState");
   const selectedCity = watch("vendorCity");
-  const cityList = selectedState ? citiesByState[selectedState] || ["Others"] : [];
+
+  const [stateList, setStateList] = useState([]);
+const [cityList, setCityList] = useState([]);
+
 
   // --------------------------
   // FETCH DYNAMIC CATEGORY OPTIONS
@@ -71,6 +74,18 @@ export default function AddEntry() {
     setProductCategories(options.map(o => o.optionValue));
   }
   load();
+}, []);
+
+useEffect(() => {
+  async function loadStates() {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/location/states`);
+      setStateList(res.data);
+    } catch (error) {
+      console.error("Failed to load states", error);
+    }
+  }
+  loadStates();
 }, []);
 
 
@@ -193,43 +208,66 @@ export default function AddEntry() {
               <div className="space-y-2">
                 <Label>Vendor State *</Label>
                 <Select
-                  onValueChange={(v) => {
-                    setValue("vendorState", v);
-                    setValue("vendorCity", "");
-                  }}
-                >
-                  <SelectTrigger className={errors.vendorState ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
+  onValueChange={(stateCode) => {
+    setValue("vendorState", stateCode);
+    setValue("vendorCity", ""); // reset city
 
-                  <SelectContent>
-                    {states.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" {...register("vendorState", { required: "Required" })} />
+    axios.get(`${API_BASE_URL}/location/cities/${stateCode}`)
+      .then(res => setCityList(res.data))
+      .catch(err => console.error("City fetch error", err));
+  }}
+>
+  <SelectTrigger className={errors.vendorState ? "border-destructive" : ""}>
+    <SelectValue placeholder="Select state" />
+  </SelectTrigger>
+
+  <SelectContent>
+    {stateList.map((s) => (
+      <SelectItem key={s.isoCode} value={s.isoCode}>
+        {s.name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
+<input type="hidden" {...register("vendorState", { required: "Required" })} />
               </div>
 
-              {/* Vendor City */}
-              <div className="space-y-2">
-                <Label>Vendor City *</Label>
-                <Select
-                  disabled={!selectedState}
-                  onValueChange={(v) => setValue("vendorCity", v)}
-                >
-                  <SelectTrigger className={errors.vendorCity ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select city" />
-                  </SelectTrigger>
 
-                  <SelectContent>
-                    {cityList.map((city) => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" {...register("vendorCity", { required: "Required" })} />
-              </div>
+
+
+
+
+{/* Vendor City */}
+<div className="space-y-2">
+  <Label>Vendor City *</Label>
+
+  <Select
+    disabled={cityList.length === 0}
+    onValueChange={(cityName) => {
+      setValue("vendorCity", cityName);
+    }}
+  >
+    <SelectTrigger className={errors.vendorCity ? "border-destructive" : ""}>
+      <SelectValue placeholder="Select city" />
+    </SelectTrigger>
+
+    <SelectContent>
+      {/* List all API cities */}
+      {cityList.map((c) => (
+        <SelectItem key={c.name} value={c.name}>
+          {c.name}
+        </SelectItem>
+      ))}
+
+      {/* Always show "Others" at bottom */}
+      <SelectItem value="Others">Others</SelectItem>
+    </SelectContent>
+  </Select>
+
+  <input type="hidden" {...register("vendorCity", { required: "Required" })} />
+</div>
+
 
               {/* Other Area */}
               {selectedCity === "Others" && (
