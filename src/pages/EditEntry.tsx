@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-toastify";
-import { states, citiesByState, mockVendorProducts } from "@/data/mockData";
 import { ArrowLeft } from "lucide-react";
-import { getFormFieldOptions } from "@/services/formFieldOptionsService";
+import axios from "axios";
+import API_BASE_URL from "../config/api";
+import { useRef } from "react";
 
 interface EditEntryForm {
   vendorName: string;
@@ -19,69 +20,192 @@ interface EditEntryForm {
   vendorCity: string;
   otherAreaName?: string;
   vendorAddress: string;
-  gstNumber: string;
-  phone: string;
-  email: string;
-  productCategory: string;
+  gstNumber?: string;
+  phone?: string;
+  email?: string;
   productDescription: string;
-  priceRange: string;
-  keywords: string;
+  priceRange?: string;
 }
+
+interface StateItem {
+  name: string;
+  isoCode: string;
+}
+
+interface CityItem {
+  name: string;
+}
+
 
 export default function EditEntry() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isInitialLoad = useRef(true);
+
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<EditEntryForm>();
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [productCategories, setProductCategories] = useState<string[]>([]);
-  const [currentCategory, setCurrentCategory] = useState<string>("");
-
-  const selectedState = watch("vendorState");
+  const [stateList, setStateList] = useState<StateItem[]>([]);
+  const [cityList, setCityList] = useState<CityItem[]>([]);
   const selectedCity = watch("vendorCity");
-  const cities = selectedState ? citiesByState[selectedState] || ["Others"] : [];
+  const [userChangedState, setUserChangedState] = useState(false);
+  const hasInitialized = useRef(false);
+  const [showLocationEditor, setShowLocationEditor] = useState(false);
 
-  useEffect(() => {
-    // Load dynamic product categories
-    const categories = getFormFieldOptions("productCategory");
-    setProductCategories(categories.map(opt => opt.optionValue));
-  }, []);
 
-  useEffect(() => {
-    const entry = mockVendorProducts.find(v => v._id === id);
-    if (entry) {
-      setCurrentCategory(entry.productCategory);
-      reset({
-        vendorName: entry.vendorName,
-        companyName: entry.companyName,
-        vendorState: entry.vendorState,
-        vendorCity: entry.vendorCity,
-        otherAreaName: entry.otherAreaName || "",
-        vendorAddress: entry.vendorAddress,
-        gstNumber: entry.gstNumber,
-        phone: entry.phone,
-        email: entry.email,
-        productCategory: entry.productCategory,
-        productDescription: entry.productDescription,
-        priceRange: entry.priceRange,
-        keywords: entry.keywords,
-      });
-    } else {
-      toast.error("Entry not found");
+  
+
+    const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+  
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/upload/image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return res.data.imageUrl;
+    } catch (err) {
+      console.error("UPLOAD ERROR:", err.response?.data || err);
+      toast.error("Image upload failed");
+      return null;
+    }
+  };
+
+
+//   useEffect(() => {
+//   const init = async () => {
+//     try {
+//       const [entryRes, statesRes] = await Promise.all([
+//         axios.get(`${API_BASE_URL}/vendors/${id}`, {
+//           headers: {
+//             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+//           },
+//         }),
+//         axios.get(`${API_BASE_URL}/location/states`),
+//       ]);
+
+//       const entry = entryRes.data;
+//       const states = statesRes.data;
+
+//       // 1️⃣ states set
+//       setStateList(states);
+
+//       // 2️⃣ poora form reset (THIS IS IMPORTANT)
+//       reset(entry);
+
+//       // 3️⃣ selected state se cities nikaalo
+//       const matchedState = states.find(
+//         (s: StateItem) => s.name === entry.vendorState
+//       );
+
+//       if (matchedState) {
+//         const cityRes = await axios.get(
+//           `${API_BASE_URL}/location/cities/${matchedState.isoCode}`
+//         );
+
+//         // 4️⃣ city list set
+//         setCityList(cityRes.data);
+//         // ⚠️ city value reset se already set ho chuki hoti hai
+//       }
+//     } catch (err) {
+//       toast.error("Failed to load entry");
+//       navigate("/dashboard");
+//     }
+//   };
+
+//   init();
+// }, [id, reset, navigate]);
+
+
+useEffect(() => {
+  if (hasInitialized.current) return; // 👈 STOP second run
+  hasInitialized.current = true;
+
+  const init = async () => {
+    try {
+      const [entryRes, statesRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/vendors/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }),
+        axios.get(`${API_BASE_URL}/location/states`),
+      ]);
+
+      const entry = entryRes.data;
+      const states = statesRes.data;
+
+      setStateList(states);
+
+      // reset once
+      reset(entry);
+
+      const matchedState = states.find(
+        (s: StateItem) => s.name === entry.vendorState
+      );
+
+      if (matchedState) {
+        const cityRes = await axios.get(
+          `${API_BASE_URL}/location/cities/${matchedState.isoCode}`
+        );
+
+        setCityList(cityRes.data);
+      }
+    } catch (err) {
+      toast.error("Failed to load entry");
       navigate("/dashboard");
     }
-  }, [id, reset, navigate]);
-
-  const onSubmit = (data: EditEntryForm) => {
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      toast.success("Entry updated successfully!");
-      navigate("/dashboard");
-      setIsLoading(false);
-    }, 1500);
   };
+
+  init();
+}, [id, reset, navigate]);
+
+
+
+const onSubmit = async (data: EditEntryForm) => {
+  setIsLoading(true);
+
+  try {
+    let visitingCardUrl;
+    let productImageUrl;
+
+    if (visitingCardFile) {
+      visitingCardUrl = await uploadImage(visitingCardFile);
+    }
+
+    if (productImageFile) {
+      productImageUrl = await uploadImage(productImageFile);
+    }
+
+    const payload = {
+      ...data,
+      ...(visitingCardUrl && { visitingCardImageUrl: visitingCardUrl }),
+      ...(productImageUrl && { productImageUrl: productImageUrl }),
+    };
+
+    await axios.put(`${API_BASE_URL}/vendors/${id}`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+
+    toast.success("Entry updated successfully!");
+    navigate("/dashboard");
+  } catch (err) {
+    toast.error("Failed to update entry");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -122,42 +246,79 @@ export default function EditEntry() {
                     {errors.companyName && <p className="text-sm text-destructive">{errors.companyName.message}</p>}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="vendorState">State *</Label>
-                    <Select value={selectedState} onValueChange={(value) => {
-                      setValue("vendorState", value);
-                      setValue("vendorCity", "");
-                    }}>
-                      <SelectTrigger className={errors.vendorState ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover z-50">
-                        {states.map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <input type="hidden" {...register("vendorState", { required: "Required" })} />
-                  </div>
+                  {!showLocationEditor && (
+  <div className="space-y-2 border rounded-md p-3 bg-muted">
+    <p className="text-sm">
+      <strong>State:</strong> {watch("vendorState") || "—"}
+    </p>
+    <p className="text-sm">
+      <strong>City:</strong> {watch("vendorCity") || "—"}
+    </p>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="vendorCity">City *</Label>
-                    <Select value={selectedCity} onValueChange={(value) => setValue("vendorCity", value)} disabled={!selectedState}>
-                      <SelectTrigger className={errors.vendorCity ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Select city" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover z-50">
-                        {cities.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <input type="hidden" {...register("vendorCity", { required: "Required" })} />
-                  </div>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => setShowLocationEditor(true)}
+    >
+      Change Location
+    </Button>
+  </div>
+)}
+
+                  {/* <div className="space-y-2">
+  <Label>State *</Label>
+  <select
+    className="w-full border rounded-md p-2"
+    {...register("vendorState", { required: "Required" })}
+   onChange={(e) => {
+  const stateName = e.target.value;
+  setUserChangedState(true); // 👈 user action
+  setValue("vendorState", stateName);
+
+  const matchedState = stateList.find(
+    (s) => s.name === stateName
+  );
+
+  if (!matchedState) return;
+
+  axios
+    .get(`${API_BASE_URL}/location/cities/${matchedState.isoCode}`)
+    .then((res) => {
+      setCityList(res.data);
+
+      // 👇 NOW clear city ONLY because user changed state
+      setValue("vendorCity", "");
+    });
+}}
+
+  >
+    <option value="">Select state</option>
+    {stateList.map((s) => (
+      <option key={s.isoCode} value={s.name}>
+        {s.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+
+<div className="space-y-2">
+  <Label>City *</Label>
+  <select
+    className="w-full border rounded-md p-2"
+    {...register("vendorCity", { required: "Required" })}
+  >
+    <option value="">Select city</option>
+    {cityList.map((c) => (
+      <option key={c.name} value={c.name}>
+        {c.name}
+      </option>
+    ))}
+    <option value="Others">Others</option>
+  </select>
+</div>
+
 
                   {selectedCity === "Others" && (
                     <div className="space-y-2 md:col-span-2">
@@ -168,7 +329,59 @@ export default function EditEntry() {
                         className={errors.otherAreaName ? "border-destructive" : ""}
                       />
                     </div>
-                  )}
+                  )} */}
+                  {showLocationEditor && (
+  <>
+    {/* State dropdown */}
+    <div className="space-y-2">
+      <Label>State *</Label>
+      <select
+        className="w-full border rounded-md p-2"
+        {...register("vendorState", { required: "Required" })}
+        onChange={(e) => {
+          const stateName = e.target.value;
+          setValue("vendorState", stateName);
+          setValue("vendorCity", "");
+
+          const matchedState = stateList.find(
+            (s) => s.name === stateName
+          );
+
+          if (!matchedState) return;
+
+          axios
+            .get(`${API_BASE_URL}/location/cities/${matchedState.isoCode}`)
+            .then((res) => setCityList(res.data));
+        }}
+      >
+        <option value="">Select state</option>
+        {stateList.map((s) => (
+          <option key={s.isoCode} value={s.name}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* City dropdown */}
+    <div className="space-y-2">
+      <Label>City *</Label>
+      <select
+        className="w-full border rounded-md p-2"
+        {...register("vendorCity", { required: "Required" })}
+      >
+        <option value="">Select city</option>
+        {cityList.map((c) => (
+          <option key={c.name} value={c.name}>
+            {c.name}
+          </option>
+        ))}
+        <option value="Others">Others</option>
+      </select>
+    </div>
+  </>
+)}
+
 
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="vendorAddress">Address *</Label>
@@ -180,53 +393,51 @@ export default function EditEntry() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="gstNumber">GST Number *</Label>
-                    <Input
-                      id="gstNumber"
-                      {...register("gstNumber", {
-                        required: "Required",
-                        pattern: {
-                          value: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                          message: "Invalid GST format"
-                        }
-                      })}
-                      maxLength={15}
-                      className={errors.gstNumber ? "border-destructive" : ""}
-                    />
-                  </div>
+  <Label htmlFor="gstNumber">GST Number</Label>
+  <Input
+    id="gstNumber"
+    {...register("gstNumber", {
+      pattern: {
+        value: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+        message: "Invalid GST format",
+      },
+    })}
+    className={errors.gstNumber ? "border-destructive" : ""}
+  />
+  {errors.gstNumber && (
+    <p className="text-sm text-destructive">{errors.gstNumber.message}</p>
+  )}
+</div>
+
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      {...register("phone", {
-                        required: "Required",
-                        pattern: {
-                          value: /^[0-9]{10}$/,
-                          message: "Must be 10 digits"
-                        }
-                      })}
-                      maxLength={10}
-                      className={errors.phone ? "border-destructive" : ""}
-                    />
-                  </div>
+  <Label htmlFor="phone">Phone</Label>
+  <Input
+    id="phone"
+    {...register("phone", {
+      pattern: {
+        value: /^[0-9]{10}$/,
+        message: "Must be 10 digits",
+      },
+    })}
+    className={errors.phone ? "border-destructive" : ""}
+  />
+  {errors.phone && (
+    <p className="text-sm text-destructive">{errors.phone.message}</p>
+  )}
+</div>
+
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...register("email", {
-                        required: "Required",
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: "Invalid email"
-                        }
-                      })}
-                      className={errors.email ? "border-destructive" : ""}
-                    />
-                  </div>
+  <Label htmlFor="email">Email</Label>
+  <Input
+    id="email"
+    type="email"
+    {...register("email")}
+    className={errors.email ? "border-destructive" : ""}
+  />
+</div>
+
 
                   <div className="space-y-2">
                     <Label htmlFor="visitingCard">Update Visiting Card Photo</Label>
@@ -245,38 +456,16 @@ export default function EditEntry() {
                 <h3 className="text-lg font-semibold text-primary">Product Information</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="productCategory">Product Category *</Label>
-                    <Select value={watch("productCategory")} onValueChange={(value) => setValue("productCategory", value)}>
-                      <SelectTrigger className={errors.productCategory ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover z-50">
-                        {/* Show current category even if deleted */}
-                        {currentCategory && !productCategories.includes(currentCategory) && (
-                          <SelectItem key={currentCategory} value={currentCategory}>
-                            {currentCategory} (Original)
-                          </SelectItem>
-                        )}
-                        {/* Show active categories */}
-                        {productCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <input type="hidden" {...register("productCategory", { required: "Required" })} />
-                  </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="priceRange">Price Range *</Label>
-                    <Input
-                      id="priceRange"
-                      {...register("priceRange", { required: "Required" })}
-                      className={errors.priceRange ? "border-destructive" : ""}
-                    />
-                  </div>
+  <Label htmlFor="priceRange">Price Range</Label>
+  <Input
+    id="priceRange"
+    {...register("priceRange")}
+    className={errors.priceRange ? "border-destructive" : ""}
+  />
+</div>
+
 
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="productDescription">Product Description *</Label>
@@ -297,14 +486,6 @@ export default function EditEntry() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="keywords">Keywords</Label>
-                    <Input
-                      id="keywords"
-                      {...register("keywords")}
-                      placeholder="Comma-separated keywords"
-                    />
-                  </div>
                 </div>
               </div>
 

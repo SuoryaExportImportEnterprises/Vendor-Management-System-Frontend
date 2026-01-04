@@ -9,9 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { ArrowLeft } from "lucide-react";
-import { getFormFieldOptions } from "@/services/formFieldOptionsService";
-import { fetchCategories } from "@/services/productCategoryService";
+import { ArrowLeft, LogOut } from "lucide-react";
 
 import {
   Popover,
@@ -32,13 +30,13 @@ interface AddEntryForm {
   vendorCity: string;
   otherAreaName?: string;
   vendorAddress: string;
-  gstNumber: string;
-  phone: string;
-  email: string;
-  productCategory: string;
+  gstNumber?: string;
+  phone?: string;
+  email?: string;
+  // productCategory: string;
   productDescription: string;
-  priceRange: string;
-  keywords: string;
+  priceRange?: string;
+  // keywords: string;
 }
 
 
@@ -49,11 +47,10 @@ export default function AddEntry() {
     useForm<AddEntryForm>();
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
-  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; 
 
 
   const [isLoading, setIsLoading] = useState(false);
-  const [productCategories, setProductCategories] = useState<string[]>([]);
 
   const selectedState = watch("vendorState");
   const selectedCity = watch("vendorCity");
@@ -64,16 +61,12 @@ const [cityList, setCityList] = useState([]);
 const [selectedStateValue, setSelectedStateValue] = useState("");
 const [selectedStateCode, setSelectedStateCode] = useState("");
 const [selectedCityValue, setSelectedCityValue] = useState("");
-
-
-  useEffect(() => {
-  async function load() {
-    const options = await fetchCategories();
-    setProductCategories(options.map(o => o.optionValue));
-  }
-  load();
-}, []);
-
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("username");
+    toast.info("Logged out successfully");
+    navigate("/", { replace: true });
+  };
 useEffect(() => {
   async function loadStates() {
     try {
@@ -115,33 +108,25 @@ useEffect(() => {
 };
 
   const onSubmit = async (data: AddEntryForm) => {
-    if (!visitingCardFile) {
-      toast.error("Visiting card image is required");
-      return;
-    }
-    if (!productImageFile) {
-      toast.error("Product image is required");
-      return;
-    }
 
     setIsLoading(true);
 
     try {
       
-      const visitingCardUrl = await uploadImage(visitingCardFile);
-      const productImageUrl = await uploadImage(productImageFile);
-
-      if (!visitingCardUrl || !productImageUrl) {
-        toast.error("Image upload failed. Cannot submit.");
-        setIsLoading(false);
-        return;
+      let visitingCardUrl = null;
+      let productImageUrl = null;
+      if (visitingCardFile) {
+        visitingCardUrl = await uploadImage(visitingCardFile);
+      }
+      if (productImageFile) {
+        productImageUrl = await uploadImage(productImageFile);
       }
 
       const payload = {
-        ...data,
-        visitingCardImageUrl: visitingCardUrl,
-        productImageUrl: productImageUrl,
-      };
+  ...data,
+  ...(visitingCardUrl && { visitingCardImageUrl: visitingCardUrl }),
+  ...(productImageUrl && { productImageUrl: productImageUrl }),
+};
 
      await axios.post(`${API_BASE_URL}/vendors`, payload, {
   headers: {
@@ -164,6 +149,33 @@ useEffect(() => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
 
+        <div className="flex justify-between items-center">
+  <div>
+    <h1 className="text-3xl font-bold text-primary">Vendor Management System</h1>
+    <p className="text-muted-foreground">Manage your vendor and product entries</p>
+  </div>
+
+  <div className="flex items-center gap-4">
+    <span className="text-sm text-muted-foreground">
+      Logged in as: <b>{localStorage.getItem("username")}</b>
+    </span>
+
+    <Button 
+      variant="ghost" 
+      size="icon"
+      onClick={handleLogout}
+      className="text-red-600 hover:text-red-800"
+    >
+      <LogOut className="h-5 w-5" />
+    </Button>
+  </div>
+</div>
+
+        <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Button>
+
 
         <Card>
           <CardHeader>
@@ -174,8 +186,6 @@ useEffect(() => {
 
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
-              {/* Vendor Name */}
               <div className="space-y-2">
                 <Label>Vendor Name *</Label>
                 <Input
@@ -194,7 +204,6 @@ useEffect(() => {
 
 
 
-              {/* Vendor State */}
 <div className="space-y-2">
   <Label>Vendor State *</Label>
 
@@ -203,16 +212,12 @@ useEffect(() => {
     onValueChange={(value) => {
       const [stateName, stateCode] = value.split("||");
 
-      // store full state name in form
       setValue("vendorState", stateName);
 
-      // store combined value for dropdown
       setSelectedStateValue(value);
 
-      // store isoCode separately (for cities)
       setSelectedStateCode(stateCode);
 
-      // reset city
       setValue("vendorCity", "");
       setCityList([]);
 
@@ -246,9 +251,6 @@ useEffect(() => {
                   />
                 </div>
               )}
-
-
-{/* Vendor City */}
 <div className="space-y-2">
   <Label>Vendor City *</Label>
 
@@ -276,155 +278,81 @@ useEffect(() => {
   <input type="hidden" {...register("vendorCity", { required: true })} />
 </div>
 
-              {/* Vendor Address */}
               <div className="space-y-2">
                 <Label>Vendor Address *</Label>
                 <Textarea {...register("vendorAddress", { required: "Required" })} />
               </div>
 
-              {/* GST Number */}
-              <div className="space-y-2">
-                <Label>GST Number *</Label>
-                <Input
-                  {...register("gstNumber", {
-                    required: "Required",
-                    pattern: {
-                      value: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                      message: "Invalid GST"
-                    }
-                  })}
-                />
-              </div>
+              <Label>GST Number</Label>
+              <Input
+              {...register("gstNumber", {
+                pattern: {
+                  value: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                  message: "Invalid GST"
+                }
+                })}
+              />
 
-
-              <div className="space-y-2">
-  <Label>Product Category *</Label>
-
-  <Popover>
-  <PopoverTrigger asChild>
-    <Button
-      variant="outline"
-      role="combobox"
-      className={cn(
-        "w-full justify-between",
-        !watch("productCategory") && "text-muted-foreground"
-      )}
-    >
-      {watch("productCategory") || "Select category"}
-      <ChevronsUpDown className="h-4 w-4 opacity-50" />
-    </Button>
-  </PopoverTrigger>
-
-  <PopoverContent
-    align="start"
-    side="bottom"
-    className="w-[var(--radix-popover-trigger-width)] p-0"
-  >
-    <Command>
-      <CommandInput placeholder="Search category..." />
-      <CommandEmpty>No category found.</CommandEmpty>
-
-      <CommandGroup>
-        {productCategories.map((c) => (
-          <CommandItem
-            key={c}
-            value={c}
-            onSelect={() => {
-              setValue("productCategory", c);
-            }}
-          >
-            <Check
-              className={cn(
-                "mr-2 h-4 w-4",
-                watch("productCategory") === c ? "opacity-100" : "opacity-0"
-              )}
-            />
-            {c}
-          </CommandItem>
-        ))}
-      </CommandGroup>
-    </Command>
-  </PopoverContent>
-</Popover>
-
-</div>
-              {/* Product Description */}
               <div className="space-y-2">
                 <Label>Product Description *</Label>
                 <Textarea {...register("productDescription", { required: "Required" })} />
               </div>
 
-              {/* Price Range */}
               <div className="space-y-2">
-                <Label>Price Range *</Label>
-                <Input {...register("priceRange", { required: "Required" })} />
+                <Label>Price Range</Label>
+                <Input {...register("priceRange")} />
               </div>
 
-              {/* Keywords */}
               <div className="space-y-2">
-                <Label>Keywords</Label>
-                <Input {...register("keywords")} placeholder="comma separated" />
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-2">
-                <Label>Phone *</Label>
+                <Label>Phone</Label>
                 <Input
-                  {...register("phone", {
-                    required: "Required",
-                    pattern: { value: /^[0-9]{10}$/, message: "10 digits only" }
-                  })}
+                {...register("phone", {
+                  pattern: { value: /^[0-9]{10}$/, message: "10 digits only" }
+                })}
                 />
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
-                <Label>Email *</Label>
+                <Label>Email</Label>
+                <Input type="email" {...register("email")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Visiting Card Image</Label>
                 <Input
-                  type="email"
-                  {...register("email", { required: "Required" })}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > MAX_FILE_SIZE) {
+                      toast.error("File too large! Max allowed is 25MB");
+                      return;
+                    }
+                    setVisitingCardFile(file);
+                  }
+                  }}
                 />
               </div>
 
-              {/* Visiting Card Image */}
               <div className="space-y-2">
-                <Label>Visiting Card Image *</Label>
+                <Label>Product Image</Label>
                 <Input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error("File too large! Max allowed is 25MB");
-        return;
-      }
-      setVisitingCardFile(file);
-    }
-  }}
-/>
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > MAX_FILE_SIZE) {
+                      toast.error("File too large! Max allowed is 25MB");
+                      return;
+                    }
+                    setProductImageFile(file);
+                  }
+                  }}
+                />
               </div>
 
-              {/* Product Image */}
-              <div className="space-y-2">
-                <Label>Product Image *</Label>
-                <Input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error("File too large! Max allowed is 25MB");
-        return;
-      }
-      setProductImageFile(file);
-    }
-  }}
-/>
-              </div>
-
-              {/* Buttons */}
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => navigate("/dashboard")}>
                   Cancel

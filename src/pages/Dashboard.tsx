@@ -67,37 +67,18 @@ interface VendorProduct {
   gstNumber: string;
   phone: string;
   email: string;
-  productCategory: string;
   productDescription: string;
   priceRange: string;
-  keywords: string;
   visitingCardImageUrl: string;
   productImageUrl: string;
   createdAt: string;
 }
-
-
-
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("username");
     toast.info("Logged out successfully");
     navigate("/", { replace: true });
   };
-
-  // const handleDelete = (id: string) => {
-  //   if (window.confirm("Are you sure you want to delete this entry?")) {
-  //     setData(data.filter(item => item._id !== id));
-  //     toast.success("Entry deleted successfully");
-  //   }
-  // };
-
-//   const handleDelete = useCallback((id: string) => {
-//   if (window.confirm("Are you sure you want to delete this entry?")) {
-//     setData(data.filter(item => item._id !== id));
-//     toast.success("Entry deleted successfully");
-//   }
-// }, [data]);
 
 
 const handleDelete = useCallback(async (id: string) => {
@@ -118,10 +99,6 @@ const handleDelete = useCallback(async (id: string) => {
   }
 }, []);
 
-
-
-
-
   const exportToCSV = () => {
     const filteredData = table.getFilteredRowModel().rows.map(row => row.original);
     
@@ -132,8 +109,8 @@ const handleDelete = useCallback(async (id: string) => {
 
     const headers = [
       "Vendor Name", "Company Name", "State", "City", "Other Area", "Address",
-      "GST Number", "Phone", "Email", "Product Category", "Product Description",
-      "Price Range", "Keywords", "Created At"
+      "GST Number", "Phone", "Email", "Product Description",
+      "Price Range", "Created At"
     ];
 
     const csvContent = [
@@ -148,10 +125,8 @@ const handleDelete = useCallback(async (id: string) => {
         row.gstNumber,
         row.phone,
         row.email,
-        row.productCategory,
         row.productDescription,
         row.priceRange,
-        row.keywords,
         new Date(row.createdAt).toLocaleDateString()
       ].map(field => `"${field}"`).join(","))
     ].join("\n");
@@ -188,9 +163,15 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
   },
 
   {
-    accessorKey: "productCategory",
-    header: "Product Category",
-  },
+  accessorKey: "productDescription",
+  header: "Product Description",
+  cell: ({ row }) => (
+    <div className="max-w-[260px] truncate" title={row.original.productDescription}>
+      {row.original.productDescription}
+    </div>
+  ),
+},
+
 
   {
     accessorKey: "gstNumber",
@@ -212,7 +193,6 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     header: "Email",
   },
 
-  // Visiting Card Image — NO sort, NO filter
   {
     accessorKey: "visitingCardImageUrl",
     header: () => <div className="text-center w-full">Visiting Card</div>,
@@ -229,7 +209,6 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     ),
   },
 
-  // Product Image — NO sort, NO filter
   {
     accessorKey: "productImageUrl",
     header: () => <div className="text-center w-full">Product</div>,
@@ -269,7 +248,6 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
 ], [navigate, handleDelete]);
 
 
-  // Global Search should match ALL fields, even hidden ones
 const globalFilterFn = (row, columnId, filterValue) => {
   const value = filterValue.toLowerCase();
   const d = row.original;
@@ -282,10 +260,10 @@ const globalFilterFn = (row, columnId, filterValue) => {
     d.otherAreaName?.toLowerCase().includes(value) ||
     d.vendorAddress?.toLowerCase().includes(value) ||
     d.gstNumber?.toLowerCase().includes(value) ||
-    d.productCategory?.toLowerCase().includes(value) ||
+    // d.productCategory?.toLowerCase().includes(value) ||
     d.productDescription?.toLowerCase().includes(value) ||
     d.priceRange?.toLowerCase().includes(value) ||
-    d.keywords?.toLowerCase().includes(value) ||
+    // d.keywords?.toLowerCase().includes(value) ||
     d.phone?.toLowerCase().includes(value) ||
     d.email?.toLowerCase().includes(value)
   );
@@ -314,16 +292,6 @@ const globalFilterFn = (row, columnId, filterValue) => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Vendor Products</h1>
-            <p className="text-muted-foreground">Manage your vendor and product entries</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div> */}
-
         <div className="flex justify-between items-center">
   <div>
     <h1 className="text-3xl font-bold text-primary">Vendor Management System</h1>
@@ -356,10 +324,7 @@ const globalFilterFn = (row, columnId, filterValue) => {
               className="max-w-sm"
             />
             <div className="flex gap-2">
-              <Button onClick={() => navigate("/form-field-settings")} variant="outline" className="text-orange-600 hover:text-orange-700 border-orange-600">
-                <Settings className="mr-2 h-4 w-4" />
-                Update Dropdowns
-              </Button>
+
               <Button onClick={exportToCSV} variant="outline">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -373,23 +338,9 @@ const globalFilterFn = (row, columnId, filterValue) => {
 
           <div className="rounded-md border overflow-x-auto">
             <table className="w-full">
-              {/* <thead className="bg-muted">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="px-4 py-3 text-left text-sm font-medium">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead> */}
 
               <thead className="bg-muted">
 
-  {/* ==== HEADER ROW WITH SORTING ==== */}
   {table.getHeaderGroups().map((headerGroup) => (
     <tr key={headerGroup.id}>
       {headerGroup.headers.map((header) => (
@@ -415,7 +366,6 @@ const globalFilterFn = (row, columnId, filterValue) => {
     </tr>
   ))}
 
-  {/* ==== FILTER ROW BELOW HEADERS ==== */}
   <tr>
     {table.getVisibleLeafColumns().map((column) => (
       <th key={column.id} className="px-4 py-2">
