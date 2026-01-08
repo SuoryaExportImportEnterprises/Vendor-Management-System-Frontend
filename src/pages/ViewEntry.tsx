@@ -16,8 +16,8 @@ interface VendorEntry {
   otherAreaName?: string;
   vendorAddress: string;
   gstNumber?: string;
-  phone?: string;
-  email?: string;
+  phones?: string[];
+  emails?: string[];
   productDescription: string;
   priceRange?: string;
   visitingCardImageUrl?: string;
@@ -175,23 +175,35 @@ export default function ViewEntry() {
 
               </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium">
-  {entry.phone || "-"}
-</p>
+<div>
+  <p className="text-sm text-muted-foreground">Phone(s)</p>
+
+  {entry.phones && entry.phones.length > 0 ? (
+    entry.phones.map((phone, index) => (
+      <p key={index} className="font-medium">
+        {phone}
+      </p>
+    ))
+  ) : (
+    <p className="font-medium">-</p>
+  )}
+</div>
 
 
-              </div>
+<div>
+  <p className="text-sm text-muted-foreground">Email(s)</p>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-               <p className="font-medium">
-  {entry.email || "-"}
-</p>
+  {entry.emails && entry.emails.length > 0 ? (
+    entry.emails.map((email, index) => (
+      <p key={index} className="font-medium">
+        {email}
+      </p>
+    ))
+  ) : (
+    <p className="font-medium">-</p>
+  )}
+</div>
 
-
-              </div>
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Visiting Card</p>

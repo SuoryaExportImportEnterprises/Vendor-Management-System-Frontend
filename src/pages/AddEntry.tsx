@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,8 +31,8 @@ interface AddEntryForm {
   otherAreaName?: string;
   vendorAddress: string;
   gstNumber?: string;
-  phone?: string;
-  email?: string;
+  emails: { value: string }[];
+  phones: { value: string }[];
   // productCategory: string;
   productDescription: string;
   priceRange?: string;
@@ -43,8 +43,32 @@ interface AddEntryForm {
 export default function AddEntry() {
   const navigate = useNavigate();
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } =
-    useForm<AddEntryForm>();
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = 
+useForm<AddEntryForm>({
+  defaultValues: {
+    emails: [{ value: "" }],
+    phones: [{ value: "" }],
+  },
+});
+const {
+  fields: emailFields,
+  append: addEmail,
+  remove: removeEmail,
+} = useFieldArray({
+  control,
+  name: "emails",
+});
+
+const {
+  fields: phoneFields,
+  append: addPhone,
+  remove: removePhone,
+} = useFieldArray({
+  control,
+  name: "phones",
+});
+
+
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const MAX_FILE_SIZE = 25 * 1024 * 1024; 
@@ -107,7 +131,19 @@ useEffect(() => {
   }
 };
 
+
+
   const onSubmit = async (data: AddEntryForm) => {
+
+    
+const cleanedEmails = data.emails
+  .map(e => e.value.trim())
+  .filter(Boolean);
+
+const cleanedPhones = data.phones
+  .map(p => p.value.trim())
+  .filter(Boolean);
+
 
     setIsLoading(true);
 
@@ -124,6 +160,8 @@ useEffect(() => {
 
       const payload = {
   ...data,
+  emails: cleanedEmails,
+  phones: cleanedPhones,
   ...(visitingCardUrl && { visitingCardImageUrl: visitingCardUrl }),
   ...(productImageUrl && { productImageUrl: productImageUrl }),
 };
@@ -304,18 +342,73 @@ useEffect(() => {
               </div>
 
               <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                {...register("phone", {
-                  pattern: { value: /^[0-9]{10}$/, message: "10 digits only" }
-                })}
-                />
-              </div>
+  <Label>Phone Number(s)</Label>
+
+  {phoneFields.map((field, index) => (
+    <div key={field.id} className="flex gap-2">
+<Input
+  placeholder="10-digit phone"
+  {...register(`phones.${index}.value`, {
+    pattern: {
+      value: /^[0-9]{10}$/,
+      message: "10 digits only",
+    },
+  })}
+/>
+
+
+      {phoneFields.length > 1 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => removePhone(index)}
+        >
+          ✕
+        </Button>
+      )}
+    </div>
+  ))}
+
+  <Button type="button" variant="ghost" onClick={() => addPhone({ value: "" })}>
+    + Add another phone
+  </Button>
+</div>
+
 
               <div className="space-y-2">
-                <Label>Email</Label>
-                <Input type="email" {...register("email")} />
-              </div>
+  <Label>Email(s)</Label>
+
+  {emailFields.map((field, index) => (
+    <div key={field.id} className="flex gap-2">
+<Input
+  type="email"
+  placeholder="Enter email"
+  {...register(`emails.${index}.value`, {
+    pattern: {
+      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: "Invalid email",
+    },
+  })}
+/>
+
+
+      {emailFields.length > 1 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => removeEmail(index)}
+        >
+          ✕
+        </Button>
+      )}
+    </div>
+  ))}
+
+  <Button type="button" variant="ghost" onClick={() => addEmail({ value: "" })}>
+    + Add another email
+  </Button>
+</div>
+
 
               <div className="space-y-2">
                 <Label>Visiting Card Image</Label>

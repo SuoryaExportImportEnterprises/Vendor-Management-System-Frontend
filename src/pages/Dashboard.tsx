@@ -65,8 +65,8 @@ interface VendorProduct {
   otherAreaName?: string;
   vendorAddress: string;
   gstNumber: string;
-  phone: string;
-  email: string;
+  phones: string[];
+  emails: string[];
   productDescription: string;
   priceRange: string;
   visitingCardImageUrl: string;
@@ -123,8 +123,8 @@ const handleDelete = useCallback(async (id: string) => {
         row.otherAreaName || "",
         row.vendorAddress,
         row.gstNumber,
-        row.phone,
-        row.email,
+        row.phones?.join(" | "),
+        row.emails?.join(" | "),
         row.productDescription,
         row.priceRange,
         new Date(row.createdAt).toLocaleDateString()
@@ -183,15 +183,34 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     header: "Price Range",
   },
 
-  {
-    accessorKey: "phone",
-    header: "Phone",
-  },
+{
+  id: "phones",
+  header: "Phone(s)",
+  cell: ({ row }) => (
+    <div className="space-y-1">
+      {row.original.phones?.length
+        ? row.original.phones.map((p, i) => (
+            <div key={i}>{p}</div>
+          ))
+        : "-"}
+    </div>
+  ),
+},
 
-  {
-    accessorKey: "email",
-    header: "Email",
-  },
+{
+  id: "emails",
+  header: "Email(s)",
+  cell: ({ row }) => (
+    <div className="space-y-1">
+      {row.original.emails?.length
+        ? row.original.emails.map((e, i) => (
+            <div key={i}>{e}</div>
+          ))
+        : "-"}
+    </div>
+  ),
+},
+
 
   {
     accessorKey: "visitingCardImageUrl",
@@ -264,8 +283,9 @@ const globalFilterFn = (row, columnId, filterValue) => {
     d.productDescription?.toLowerCase().includes(value) ||
     d.priceRange?.toLowerCase().includes(value) ||
     // d.keywords?.toLowerCase().includes(value) ||
-    d.phone?.toLowerCase().includes(value) ||
-    d.email?.toLowerCase().includes(value)
+    d.phones?.some(p => p.toLowerCase().includes(value)) ||
+    d.emails?.some(e => e.toLowerCase().includes(value))
+
   );
 };
 

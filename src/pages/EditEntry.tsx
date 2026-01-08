@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,8 @@ interface EditEntryForm {
   otherAreaName?: string;
   vendorAddress: string;
   gstNumber?: string;
-  phone?: string;
-  email?: string;
+  phones: string[];
+  emails: string[];
   productDescription: string;
   priceRange?: string;
 }
@@ -41,8 +41,42 @@ export default function EditEntry() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isInitialLoad = useRef(true);
+  const {
+  register,
+  handleSubmit,
+  watch,
+  setValue,
+  reset,
+  control,
+  formState: { errors },
+  } = useForm<EditEntryForm>({
+  defaultValues: {
+    phones: [""],
+    emails: [""],
+  },
+}) as any;
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<EditEntryForm>();
+
+  const {
+  fields: phoneFields,
+  append: addPhone,
+  remove: removePhone,
+} = useFieldArray({
+  control,
+  name: "phones",
+});
+
+const {
+  fields: emailFields,
+  append: addEmail,
+  remove: removeEmail,
+} = useFieldArray({
+  control,
+  name: "emails",
+});
+
+
+
   const [visitingCardFile, setVisitingCardFile] = useState<File | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -146,7 +180,12 @@ useEffect(() => {
       setStateList(states);
 
       // reset once
-      reset(entry);
+      reset({
+  ...entry,
+  phones: entry.phones?.length ? entry.phones : [""],
+  emails: entry.emails?.length ? entry.emails : [""],
+});
+
 
       const matchedState = states.find(
         (s: StateItem) => s.name === entry.vendorState
@@ -185,8 +224,15 @@ const onSubmit = async (data: EditEntryForm) => {
       productImageUrl = await uploadImage(productImageFile);
     }
 
+    const cleanedPhones = data.phones?.filter(p => p.trim() !== "") || [];
+    const cleanedEmails = data.emails?.filter(e => e.trim() !== "") || [];
+
+
+
     const payload = {
       ...data,
+      phones: cleanedPhones,
+      emails: cleanedEmails,
       ...(visitingCardUrl && { visitingCardImageUrl: visitingCardUrl }),
       ...(productImageUrl && { productImageUrl: productImageUrl }),
     };
@@ -410,33 +456,71 @@ const onSubmit = async (data: EditEntryForm) => {
 </div>
 
 
-                  <div className="space-y-2">
-  <Label htmlFor="phone">Phone</Label>
-  <Input
-    id="phone"
-    {...register("phone", {
-      pattern: {
-        value: /^[0-9]{10}$/,
-        message: "Must be 10 digits",
-      },
-    })}
-    className={errors.phone ? "border-destructive" : ""}
-  />
-  {errors.phone && (
-    <p className="text-sm text-destructive">{errors.phone.message}</p>
-  )}
+<div className="space-y-2">
+  <Label>Phone Number(s)</Label>
+
+  {phoneFields.map((field, index) => (
+    <div key={field.id} className="flex gap-2">
+      <Input
+        placeholder="10-digit phone"
+        {...register(`phones.${index}`, {
+          pattern: {
+            value: /^[0-9]{10}$/,
+            message: "Must be 10 digits",
+          },
+        })}
+      />
+
+      {phoneFields.length > 1 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => removePhone(index)}
+        >
+          ✕
+        </Button>
+      )}
+    </div>
+  ))}
+
+  <Button type="button" variant="ghost" onClick={() => addPhone("")}>
+    + Add another phone
+  </Button>
 </div>
 
+<div className="space-y-2">
+  <Label>Email(s)</Label>
 
-                  <div className="space-y-2">
-  <Label htmlFor="email">Email</Label>
-  <Input
-    id="email"
-    type="email"
-    {...register("email")}
-    className={errors.email ? "border-destructive" : ""}
-  />
+  {emailFields.map((field, index) => (
+    <div key={field.id} className="flex gap-2">
+      <Input
+        type="email"
+        placeholder="Enter email"
+        {...register(`emails.${index}`, {
+          pattern: {
+            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: "Invalid email",
+          },
+        })}
+      />
+
+      {emailFields.length > 1 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => removeEmail(index)}
+        >
+          ✕
+        </Button>
+      )}
+    </div>
+  ))}
+
+  <Button type="button" variant="ghost" onClick={() => addEmail("")}>
+    + Add another email
+  </Button>
 </div>
+
 
 
                   <div className="space-y-2">
