@@ -246,7 +246,7 @@ export default function ViewEntry() {
               <div>
                 <p className="text-sm text-muted-foreground">Created At</p>
                 <p className="font-medium">
-                  {new Date(entry.createdAt).toLocaleString()}
+                  {new Date(entry.createdAt).toLocaleString("en-GB")}
                 </p>
               </div>
 
