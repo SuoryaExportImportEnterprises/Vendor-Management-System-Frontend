@@ -32,9 +32,6 @@ export default function ViewEntry() {
   const [entry, setEntry] = useState<VendorEntry | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ---------------------------
-  // FETCH ENTRY FROM BACKEND
-  // ---------------------------
   useEffect(() => {
     const fetchEntry = async () => {
       try {
@@ -56,9 +53,6 @@ export default function ViewEntry() {
     fetchEntry();
   }, [id]);
 
-  // ---------------------------
-  // DELETE ENTRY
-  // ---------------------------
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this entry?")) return;
 
@@ -77,9 +71,6 @@ export default function ViewEntry() {
     }
   };
 
-  // ---------------------------
-  // LOADER
-  // ---------------------------
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -88,9 +79,6 @@ export default function ViewEntry() {
     );
   }
 
-  // ---------------------------
-  // NOT FOUND
-  // ---------------------------
   if (!entry) {
     return (
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
@@ -106,9 +94,6 @@ export default function ViewEntry() {
     );
   }
 
-  // ---------------------------
-  // MAIN UI (same as old mock UI, with real data)
-  // ---------------------------
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -222,7 +207,6 @@ export default function ViewEntry() {
             </CardContent>
           </Card>
 
-          {/* Product Information */}
           <Card>
             <CardHeader>
               <CardTitle className="text-primary">Product Information</CardTitle>

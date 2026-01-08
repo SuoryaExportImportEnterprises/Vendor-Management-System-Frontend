@@ -114,53 +114,8 @@ const {
   };
 
 
-//   useEffect(() => {
-//   const init = async () => {
-//     try {
-//       const [entryRes, statesRes] = await Promise.all([
-//         axios.get(`${API_BASE_URL}/vendors/${id}`, {
-//           headers: {
-//             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-//           },
-//         }),
-//         axios.get(`${API_BASE_URL}/location/states`),
-//       ]);
-
-//       const entry = entryRes.data;
-//       const states = statesRes.data;
-
-//       // 1️⃣ states set
-//       setStateList(states);
-
-//       // 2️⃣ poora form reset (THIS IS IMPORTANT)
-//       reset(entry);
-
-//       // 3️⃣ selected state se cities nikaalo
-//       const matchedState = states.find(
-//         (s: StateItem) => s.name === entry.vendorState
-//       );
-
-//       if (matchedState) {
-//         const cityRes = await axios.get(
-//           `${API_BASE_URL}/location/cities/${matchedState.isoCode}`
-//         );
-
-//         // 4️⃣ city list set
-//         setCityList(cityRes.data);
-//         // ⚠️ city value reset se already set ho chuki hoti hai
-//       }
-//     } catch (err) {
-//       toast.error("Failed to load entry");
-//       navigate("/dashboard");
-//     }
-//   };
-
-//   init();
-// }, [id, reset, navigate]);
-
-
 useEffect(() => {
-  if (hasInitialized.current) return; // 👈 STOP second run
+  if (hasInitialized.current) return;
   hasInitialized.current = true;
 
   const init = async () => {
@@ -312,71 +267,7 @@ const onSubmit = async (data: EditEntryForm) => {
   </div>
 )}
 
-                  {/* <div className="space-y-2">
-  <Label>State *</Label>
-  <select
-    className="w-full border rounded-md p-2"
-    {...register("vendorState", { required: "Required" })}
-   onChange={(e) => {
-  const stateName = e.target.value;
-  setUserChangedState(true); // 👈 user action
-  setValue("vendorState", stateName);
-
-  const matchedState = stateList.find(
-    (s) => s.name === stateName
-  );
-
-  if (!matchedState) return;
-
-  axios
-    .get(`${API_BASE_URL}/location/cities/${matchedState.isoCode}`)
-    .then((res) => {
-      setCityList(res.data);
-
-      // 👇 NOW clear city ONLY because user changed state
-      setValue("vendorCity", "");
-    });
-}}
-
-  >
-    <option value="">Select state</option>
-    {stateList.map((s) => (
-      <option key={s.isoCode} value={s.name}>
-        {s.name}
-      </option>
-    ))}
-  </select>
-</div>
-
-
-<div className="space-y-2">
-  <Label>City *</Label>
-  <select
-    className="w-full border rounded-md p-2"
-    {...register("vendorCity", { required: "Required" })}
-  >
-    <option value="">Select city</option>
-    {cityList.map((c) => (
-      <option key={c.name} value={c.name}>
-        {c.name}
-      </option>
-    ))}
-    <option value="Others">Others</option>
-  </select>
-</div>
-
-
-                  {selectedCity === "Others" && (
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="otherAreaName">Other Area Name *</Label>
-                      <Input
-                        id="otherAreaName"
-                        {...register("otherAreaName", { required: selectedCity === "Others" ? "Required when city is Others" : false })}
-                        className={errors.otherAreaName ? "border-destructive" : ""}
-                      />
-                    </div>
-                  )} */}
-                  {showLocationEditor && (
+{showLocationEditor && (
   <>
     {/* State dropdown */}
     <div className="space-y-2">
@@ -535,7 +426,6 @@ const onSubmit = async (data: EditEntryForm) => {
                 </div>
               </div>
 
-              {/* Product Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-primary">Product Information</h3>
                 
