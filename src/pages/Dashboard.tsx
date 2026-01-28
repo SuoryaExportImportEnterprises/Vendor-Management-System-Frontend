@@ -68,6 +68,7 @@ interface VendorProduct {
   phones: string[];
   emails: string[];
   productDescription: string;
+  website?: string;
   priceRange: string;
   visitingCardImageUrl: string;
   productImageUrl: string;
@@ -109,7 +110,7 @@ const handleDelete = useCallback(async (id: string) => {
 
     const headers = [
       "Vendor Name", "Company Name", "State", "City", "Other Area", "Address",
-      "GST Number", "Phone", "Email", "Product Description",
+      "GST Number", "Phone", "Email", "Website", "Product Description",
       "Price Range", "Created At"
     ];
 
@@ -125,9 +126,10 @@ const handleDelete = useCallback(async (id: string) => {
         row.gstNumber,
         row.phones?.join(" | "),
         row.emails?.join(" | "),
+        row.website || "",
         row.productDescription,
         row.priceRange,
-        new Date(row.createdAt).toLocaleDateString()
+        new Date(row.createdAt).toLocaleDateString("en-GB")
       ].map(field => `"${field}"`).join(","))
     ].join("\n");
 
@@ -244,6 +246,29 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     ),
   },
 
+{
+  accessorKey: "website",
+  header: "Website",
+  cell: ({ row }) =>
+    row.original.website ? (
+      <a
+        href={
+          row.original.website.startsWith("http")
+            ? row.original.website
+            : `https://${row.original.website}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline"
+      >
+        {row.original.website}
+      </a>
+    ) : (
+      "-"
+    ),
+},
+
+
   {
     id: "actions",
     header: "Actions",
@@ -282,6 +307,7 @@ const globalFilterFn = (row, columnId, filterValue) => {
     // d.productCategory?.toLowerCase().includes(value) ||
     d.productDescription?.toLowerCase().includes(value) ||
     d.priceRange?.toLowerCase().includes(value) ||
+    d.website?.toLowerCase().includes(value) ||
     // d.keywords?.toLowerCase().includes(value) ||
     d.phones?.some(p => p.toLowerCase().includes(value)) ||
     d.emails?.some(e => e.toLowerCase().includes(value))

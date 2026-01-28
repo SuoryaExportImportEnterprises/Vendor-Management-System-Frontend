@@ -34,6 +34,7 @@ interface AddEntryForm {
   emails: { value: string }[];
   phones: { value: string }[];
   // productCategory: string;
+  website?: string;
   productDescription: string;
   priceRange?: string;
   // keywords: string;
@@ -408,6 +409,17 @@ const cleanedPhones = data.phones
     + Add another email
   </Button>
 </div>
+
+
+
+<div className="space-y-2">
+  <Label>Website</Label>
+  <Input
+    placeholder="https://example.com"
+    {...register("website")}
+  />
+</div>
+
 
 
               <div className="space-y-2">

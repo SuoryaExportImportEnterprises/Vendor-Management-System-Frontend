@@ -18,6 +18,7 @@ interface VendorEntry {
   gstNumber?: string;
   phones?: string[];
   emails?: string[];
+  website?: string;
   productDescription: string;
   priceRange?: string;
   visitingCardImageUrl?: string;
@@ -188,6 +189,30 @@ export default function ViewEntry() {
     <p className="font-medium">-</p>
   )}
 </div>
+
+
+<div>
+  <p className="text-sm text-muted-foreground">Website</p>
+
+  {entry.website ? (
+    <a
+      href={
+        entry.website.startsWith("http")
+          ? entry.website
+          : `https://${entry.website}`
+      }
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-blue-600 underline break-all"
+    >
+      {entry.website}
+    </a>
+  ) : (
+    <p className="font-medium">-</p>
+  )}
+</div>
+
+
 
 
               <div>

@@ -23,6 +23,7 @@ interface EditEntryForm {
   gstNumber?: string;
   phones: string[];
   emails: string[];
+  website?: string;
   productDescription: string;
   priceRange?: string;
 }
@@ -412,6 +413,14 @@ const onSubmit = async (data: EditEntryForm) => {
   </Button>
 </div>
 
+
+<div className="space-y-2">
+  <Label>Website</Label>
+  <Input
+    {...register("website")}
+    placeholder="https://example.com"
+  />
+</div>
 
 
                   <div className="space-y-2">
