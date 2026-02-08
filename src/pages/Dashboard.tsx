@@ -19,6 +19,7 @@ import { ArrowUpDown, Plus, Download, Eye, Pencil, Trash2, LogOut, Settings } fr
 import { toast } from "react-toastify";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
+import type { SortingFn } from "@tanstack/react-table";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -55,6 +56,21 @@ const fetchData = async () => {
     navigate("/", { replace: true });
   }
 }, [navigate]);
+
+
+useEffect(() => {
+  if (!globalFilter.trim()) {
+    setSorting([]);
+    return;
+  }
+
+  setSorting([
+    {
+      id: "globalSearchRank",
+      desc: false,
+    },
+  ]);
+}, [globalFilter]);
 
 interface VendorProduct {
   _id: string;
@@ -142,31 +158,72 @@ const handleDelete = useCallback(async (id: string) => {
     toast.success("CSV exported successfully");
   };
 
+const getSearchPriority = (row, search) => {
+  if (!search) return 999;
+
+  const s = search.toLowerCase();
+  const d = row.original;
+
+  if (d.vendorName?.toLowerCase().includes(s)) return 1;
+  if (d.companyName?.toLowerCase().includes(s)) return 2;
+  if (d.productDescription?.toLowerCase().includes(s)) return 3;
+  if (d.vendorCity?.toLowerCase().includes(s)) return 4;
+  if (d.vendorState?.toLowerCase().includes(s)) return 5;
+  if (d.gstNumber?.toLowerCase().includes(s)) return 6;
+  if (d.priceRange?.toLowerCase().includes(s)) return 7;
+  if (d.website?.toLowerCase().includes(s)) return 8;
+  if (d.phones?.some(p => p.toLowerCase().includes(s))) return 9;
+  if (d.emails?.some(e => e.toLowerCase().includes(s))) return 10;
+
+  return 999;
+};
+
+const globalSearchSort: SortingFn<VendorProduct> = useCallback(
+  (rowA, rowB) => {
+    const rankA = getSearchPriority(rowA, globalFilter);
+    const rankB = getSearchPriority(rowB, globalFilter);
+    return rankA - rankB;
+  },
+  [globalFilter]
+);
+
 const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
+
+  {
+  id: "globalSearchRank",
+  sortingFn: globalSearchSort,
+  enableSorting: false,
+  enableColumnFilter: false,
+},
 
   {
     accessorKey: "vendorName",
     header: "Vendor Name",
+    enableGlobalFilter: true,
   },
 
   {
     accessorKey: "companyName",
     header: "Company Name",
+    enableGlobalFilter: true,
   },
 
   {
     accessorKey: "vendorState",
     header: "State",
+    enableGlobalFilter: true,
   },
 
   {
     accessorKey: "vendorCity",
     header: "City",
+    enableGlobalFilter: true,
   },
 
   {
   accessorKey: "productDescription",
   header: "Product Description",
+  enableGlobalFilter: true,
   cell: ({ row }) => (
     <div className="max-w-[260px] truncate" title={row.original.productDescription}>
       {row.original.productDescription}
@@ -178,16 +235,35 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
   {
     accessorKey: "gstNumber",
     header: "GST",
+    enableGlobalFilter: true,
   },
 
   {
     accessorKey: "priceRange",
     header: "Price Range",
+    enableGlobalFilter: true,
   },
+
+// {
+//   id: "phones",
+//   header: "Phone(s)",
+//   enableGlobalFilter: true,
+//   cell: ({ row }) => (
+//     <div className="space-y-1">
+//       {row.original.phones?.length
+//         ? row.original.phones.map((p, i) => (
+//             <div key={i}>{p}</div>
+//           ))
+//         : "-"}
+//     </div>
+//   ),
+// },
 
 {
   id: "phones",
   header: "Phone(s)",
+  accessorFn: row => row.phones?.join(" ") ?? "",
+  enableGlobalFilter: true,
   cell: ({ row }) => (
     <div className="space-y-1">
       {row.original.phones?.length
@@ -199,9 +275,27 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
   ),
 },
 
+// {
+//   id: "emails",
+//   header: "Email(s)",
+//   enableGlobalFilter: true,
+//   cell: ({ row }) => (
+//     <div className="space-y-1">
+//       {row.original.emails?.length
+//         ? row.original.emails.map((e, i) => (
+//             <div key={i}>{e}</div>
+//           ))
+//         : "-"}
+//     </div>
+//   ),
+// },
+
+
 {
   id: "emails",
   header: "Email(s)",
+  accessorFn: row => row.emails?.join(" ") ?? "",
+  enableGlobalFilter: true,
   cell: ({ row }) => (
     <div className="space-y-1">
       {row.original.emails?.length
@@ -246,9 +340,33 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     ),
   },
 
+// {
+//   accessorKey: "website",
+//   header: "Website",
+//   enableGlobalFilter: true,
+//   cell: ({ row }) =>
+//     row.original.website ? (
+//       <a
+//         href={
+//           row.original.website.startsWith("http")
+//             ? row.original.website
+//             : `https://${row.original.website}`
+//         }
+//         target="_blank"
+//         rel="noopener noreferrer"
+//         className="text-blue-600 underline"
+//       >
+//         {row.original.website}
+//       </a>
+//     ) : (
+//       "-"
+//     ),
+// },
+
 {
   accessorKey: "website",
   header: "Website",
+  enableGlobalFilter: true,
   cell: ({ row }) =>
     row.original.website ? (
       <a
@@ -289,51 +407,28 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     ),
   },
 
-], [navigate, handleDelete]);
+], [navigate, handleDelete, globalSearchSort]);
 
+const isSearching = Boolean(globalFilter?.trim());
 
-const globalFilterFn = (row, columnId, filterValue) => {
-  const value = filterValue.toLowerCase();
-  const d = row.original;
-
-  return (
-    d.vendorName?.toLowerCase().includes(value) ||
-    d.companyName?.toLowerCase().includes(value) ||
-    d.vendorState?.toLowerCase().includes(value) ||
-    d.vendorCity?.toLowerCase().includes(value) ||
-    d.otherAreaName?.toLowerCase().includes(value) ||
-    d.vendorAddress?.toLowerCase().includes(value) ||
-    d.gstNumber?.toLowerCase().includes(value) ||
-    // d.productCategory?.toLowerCase().includes(value) ||
-    d.productDescription?.toLowerCase().includes(value) ||
-    d.priceRange?.toLowerCase().includes(value) ||
-    d.website?.toLowerCase().includes(value) ||
-    // d.keywords?.toLowerCase().includes(value) ||
-    d.phones?.some(p => p.toLowerCase().includes(value)) ||
-    d.emails?.some(e => e.toLowerCase().includes(value))
-
-  );
-};
-
-
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnFilters,
-      globalFilter,
-    },
-    globalFilterFn,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
+const table = useReactTable({
+  data,
+  columns,
+  state: {
+    sorting,
+    columnFilters,
+    globalFilter,
+  },
+  // globalFilterFn,
+  enableGlobalFilter: true, // 🔥 REQUIRED
+  onSortingChange: setSorting,
+  onColumnFiltersChange: setColumnFilters,
+  onGlobalFilterChange: setGlobalFilter,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+});
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -364,11 +459,14 @@ const globalFilterFn = (row, columnId, filterValue) => {
         <Card className="p-6">
           <div className="flex justify-between items-center mb-4 gap-4">
             <Input
-              placeholder="Search all columns..."
-              value={globalFilter ?? ""}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="max-w-sm"
-            />
+  placeholder="Search all columns..."
+  value={globalFilter ?? ""}
+  onChange={(e) => {
+    setGlobalFilter(e.target.value);
+    table.setPageIndex(0); // ✅ SAFE here
+  }}
+  className="max-w-sm"
+/>
             <div className="flex gap-2">
 
               <Button onClick={exportToCSV} variant="outline">
@@ -429,7 +527,10 @@ const globalFilterFn = (row, columnId, filterValue) => {
 </thead>
 
               <tbody>
-                {table.getRowModel().rows.map((row) => (
+                {(isSearching
+                ? table.getFilteredRowModel().rows   
+                : table.getRowModel().rows       
+                ).map((row) => (
                   <tr key={row.id} className="border-t hover:bg-muted/50">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-4 py-3 text-sm">
@@ -446,24 +547,26 @@ const globalFilterFn = (row, columnId, filterValue) => {
             <div className="text-sm text-muted-foreground">
               Showing {table.getFilteredRowModel().rows.length} of {data.length} entries
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+{!isSearching && (
+  <div className="flex gap-2">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => table.previousPage()}
+      disabled={!table.getCanPreviousPage()}
+    >
+      Previous
+    </Button>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => table.nextPage()}
+      disabled={!table.getCanNextPage()}
+    >
+      Next
+    </Button>
+  </div>
+)}
           </div>
         </Card>
       </div>
