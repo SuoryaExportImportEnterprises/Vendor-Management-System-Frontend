@@ -197,7 +197,7 @@ export default function ViewEntry() {
   {entry.website ? (
     <a
       href={
-        entry.website.startsWith("http")
+        entry.website.startsWith("https")
           ? entry.website
           : `https://${entry.website}`
       }

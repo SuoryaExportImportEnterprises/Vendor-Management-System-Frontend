@@ -371,7 +371,7 @@ const columns = useMemo<ColumnDef<VendorProduct>[]>(() => [
     row.original.website ? (
       <a
         href={
-          row.original.website.startsWith("http")
+          row.original.website.startsWith("https")
             ? row.original.website
             : `https://${row.original.website}`
         }
